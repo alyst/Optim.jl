@@ -129,7 +129,7 @@ function optimize{T}(df::DifferentiableFunction,
     py = similar(x)
 
     # Store f(x) in f_x
-    f_x = df.fg!(x, g)
+    f_x = evalfg!(df, x, g)
     @assert typeof(f_x) == T
     f_x_previous = convert(T, NaN)
     f_calls, g_calls = f_calls + 1, g_calls + 1
@@ -214,7 +214,7 @@ function optimize{T}(df::DifferentiableFunction,
         copy!(g_previous, g)
 
         # Update the function value and gradient
-        f_x_previous, f_x = f_x, df.fg!(x, g)
+        f_x_previous, f_x = f_x, evalfg!(df, x, g)
         f_calls, g_calls = f_calls + 1, g_calls + 1
 
         x_converged,
