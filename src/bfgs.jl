@@ -68,7 +68,7 @@ function optimize{T}(d::DifferentiableFunction,
     x_ls, g_ls = Array(T, n), Array(T, n)
 
     # Store f(x) in f_x
-    f_x_previous, f_x = NaN, d.fg!(x, g)
+    f_x_previous, f_x = NaN, evalfg!(d, x, g)
     f_calls, g_calls = f_calls + 1, g_calls + 1
     copy!(g_previous, g)
 
@@ -138,7 +138,7 @@ function optimize{T}(d::DifferentiableFunction,
         copy!(g_previous, g)
 
         # Update the function value and gradient
-        f_x_previous, f_x = f_x, d.fg!(x, g)
+        f_x_previous, f_x = f_x, evalfg!(d, x, g)
         f_calls, g_calls = f_calls + 1, g_calls + 1
 
         x_converged,
