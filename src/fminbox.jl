@@ -52,24 +52,24 @@ function barrier_box{T}(x::Array{T}, g, l::Array{T}, u::Array{T})
     return v
 end
 
-function function_barrier{T}(x::Array{T}, gfunc, gbarrier, f::Function, fbarrier::Function)
+function function_barrier{T}(x::Array{T}, gfunc, gbarrier, df::DifferentiableFunction, fbarrier)
     vbarrier = fbarrier(x, gbarrier)
     if isfinite(vbarrier)
-        vfunc = f(x, gfunc)
+        vfunc = evalfg!(df, x, gfunc)
     else
         vfunc = vbarrier
     end
     return vfunc, vbarrier
 end
 
-function barrier_combined{T}(x::Array{T}, g, gfunc, gbarrier, val_each::Vector{T}, fb::Function, mu::T)
+function barrier_combined{T}(x::Array{T}, g::Union{Array{T},Void}, gfunc::Array{T}, gbarrier::Array{T}, val_each::Vector{T}, fb, mu::T)
     calc_grad = !(g === nothing)
     valfunc, valbarrier = fb(x, gfunc, gbarrier)
     val_each[1] = valfunc
     val_each[2] = valbarrier
     if calc_grad
-        for i = 1:length(g)
-            g[i] = gfunc[i] + mu*gbarrier[i]
+        for i = 1:length(g::Array{T})
+            (g::Array{T})[i] = gfunc[i] + mu*gbarrier[i]
         end
     end
     return convert(T, valfunc + mu*valbarrier) # FIXME make this unnecessary
@@ -105,6 +105,73 @@ end
 const PARAMETERS_MU = one64<<display_nextbit
 display_nextbit += 1
 
+immutable FMinBoxBarrierBox{T<:FloatingPoint}
+    l::Array{T}
+    u::Array{T}
+end
+
+Base.call{T}(fbarrier::FMinBoxBarrierBox{T}, x::Array{T}, gbarrier::Array{T}) = barrier_box(x, gbarrier, fbarrier.l, fbarrier.u)
+
+immutable FMinBoxFunctionBarrier{T<:FloatingPoint, DF<:DifferentiableFunction}
+    df::DF
+    fbarrier::FMinBoxBarrierBox{T}
+end
+
+FMinBoxFunctionBarrier{T<:FloatingPoint, DF<:DifferentiableFunction}(df::DF, l::Array{T}, u::Array{T}) =
+    FMinBoxFunctionBarrier{T,DF}(df, FMinBoxBarrierBox{T}(l, u))
+
+Base.call{T}(fb::FMinBoxFunctionBarrier{T}, x::Array{T}, gfunc::Array{T}, gbarrier::Array{T}) = function_barrier(x, gfunc, gbarrier, fb.df, fb.fbarrier)
+
+type BarrierCombinedDifferentiableFunction{T<:FloatingPoint,DF<:DifferentiableFunction} <: DifferentiableFunction
+    fb::FMinBoxFunctionBarrier{T,DF}
+    gfunc::Array{T}
+    gbarrier::Array{T}
+    valboth::Array{T}
+
+    mu::T
+end
+
+function BarrierCombinedDifferentiableFunction{T<:FloatingPoint,DF<:DifferentiableFunction}(df::DF, initial_x::Array{T}, l::Array{T}, u::Array{T}, mu0::T, mufactor::T)
+    x = copy(initial_x)
+
+    # to be careful about one special case that might occur commonly
+    # in practice: the initial guess x is exactly in the center of the
+    # box. In that case, gbarrier is zero. But since the
+    # initialization only makes use of the magnitude, we can fix this
+    # by using the sum of the absolute values of the contributions
+    # from each edge.
+    gbarrier = similar(initial_x)
+    for i = 1:length(gbarrier)
+        thisx = initial_x[i]
+        thisl = l[i]
+        thisu = u[i]
+        if thisx < thisl || thisx > thisu
+            error("Initial position must be inside the box")
+        end
+        gbarrier[i] = (isfinite(thisl) ? one(T)/(thisx-thisl) : zero(T)) + (isfinite(thisu) ? one(T)/(thisu-thisx) : zero(T))
+    end
+    gfunc = similar(initial_x)
+    evalfg!(df, x, gfunc)
+
+    BarrierCombinedDifferentiableFunction{T,DF}(FMinBoxFunctionBarrier(df, l, u),
+                                                gfunc, gbarrier, Array(T, 2),
+                                                isnan(mu0) ? initialize_mu(gfunc, gbarrier; mu0factor=mufactor) : mu0)
+end
+
+evalf(bcdf::BarrierCombinedDifferentiableFunction, x) = barrier_combined(x, nothing, bcdf.gfunc, bcdf.gbarrier, bcdf.valboth, bcdf.fb, bcdf.mu)
+evalg!(bcdf::BarrierCombinedDifferentiableFunction, x, grad) = barrier_combined(x, grad, bcdf.gfunc, bcdf.gbarrier, bcdf.valboth, bcdf.fb, bcdf.mu)
+evalfg!(bcdf::BarrierCombinedDifferentiableFunction, x, grad) = barrier_combined(x, grad, bcdf.gfunc, bcdf.gbarrier, bcdf.valboth, bcdf.fb, bcdf.mu)
+
+immutable BarrierCombinedDifferentiableFunctionPrecondPrep{T<:FloatingPoint,DF<:DifferentiableFunction,PCP}
+    bcdf::BarrierCombinedDifferentiableFunction{T,DF}
+    precondprep::PCP
+end
+
+BarrierCombinedDifferentiableFunctionPrecondPrep{T<:FloatingPoint,DF<:DifferentiableFunction,PCP}(bcdf::BarrierCombinedDifferentiableFunction{T,DF}, precondprep::PCP) =
+    BarrierCombinedDifferentiableFunctionPrecondPrep{T,DF,PCP}(bcdf, precondprep)
+
+Base.call(bcdfpcp::BarrierCombinedDifferentiableFunctionPrecondPrep, P, x) = bcdfpcp.precondprep(P, x, bcdfpcp.bcdf.fb.fbarrier.l, bcdfpcp.bcdf.fb.fbarrier.u, bcdfpcp.bcdf.mu)
+
 function fminbox{T<:AbstractFloat}(df::DifferentiableFunction,
                     initial_x::Array{T},
                     l::Array{T},
@@ -126,35 +193,14 @@ function fminbox{T<:AbstractFloat}(df::DifferentiableFunction,
                     optimizer = cg)
 
     x = copy(initial_x)
-    fbarrier = (x, gbarrier) -> barrier_box(x, gbarrier, l, u)
-    fb = (x, gfunc, gbarrier) -> function_barrier(x, gfunc, gbarrier, df.fg!, fbarrier)
-    gfunc = similar(x)
-    gbarrier = similar(x)
+    dfbox = BarrierCombinedDifferentiableFunction(df, initial_x, l, u, mu0, mufactor)
     P = Array(T, length(initial_x))
-    # to be careful about one special case that might occur commonly
-    # in practice: the initial guess x is exactly in the center of the
-    # box. In that case, gbarrier is zero. But since the
-    # initialization only makes use of the magnitude, we can fix this
-    # by using the sum of the absolute values of the contributions
-    # from each edge.
-    for i = 1:length(gbarrier)
-        thisx = x[i]
-        thisl = l[i]
-        thisu = u[i]
-        if thisx < thisl || thisx > thisu
-            error("Initial position must be inside the box")
-        end
-        gbarrier[i] = (isfinite(thisl) ? one(T)/(thisx-thisl) : zero(T)) + (isfinite(thisu) ? one(T)/(thisu-thisx) : zero(T))
-    end
-    valfunc = df.fg!(x, gfunc)  # is this used??
-    mu = isnan(mu0) ? initialize_mu(gfunc, gbarrier; mu0factor=mufactor) : mu0
     if show_trace > 0
         println("######## fminbox ########")
         println("Initial mu = ", mu)
     end
 
     g = similar(x)
-    valboth = Array(T, 2)
     fval_all = Array(Vector{T}, 0)
     fcount_all = 0
     xold = similar(x)
@@ -164,13 +210,11 @@ function fminbox{T<:AbstractFloat}(df::DifferentiableFunction,
     while true
         copy!(xold, x)
         # Optimize with current setting of mu
-        funcc = (x, g) -> barrier_combined(x, g, gfunc, gbarrier, valboth, fb, mu)
-        fval0 = funcc(x, nothing)
-        dfbox = DifferentiableFunction(x->funcc(x,nothing), (x,g)->(funcc(x,g); g), funcc)
+        fval0 = evalf(dfbox, x)
         if show_trace > 0
-            println("#### Calling optimizer with mu = ", mu, " ####")
+            println("#### Calling optimizer with mu = ", dfbox.mu, " ####")
         end
-        pcp = (P, x) -> precondprep(P, x, l, u, mu)
+        pcp = BarrierCombinedDifferentiableFunctionPrecondPrep(dfbox, precondprep)
         resultsnew = optimizer(dfbox, x; xtol=xtol, ftol=ftol, grtol=grtol, iterations=iterations,
                                          store_trace=store_trace, show_trace=show_trace, extended_trace=extended_trace,
                                          linesearch! = linesearch!, eta=eta, P=P, precondprep=pcp)
@@ -185,11 +229,11 @@ function fminbox{T<:AbstractFloat}(df::DifferentiableFunction,
         end
 
         # Decrease mu
-        mu *= mufactor
+        dfbox.mu *= mufactor
 
         # Test for convergence
         for i = 1:length(x)
-            g[i] = gfunc[i] + mu*gbarrier[i]
+            g[i] = dfbox.gfunc[i] + dfbox.mu*dfbox.gbarrier[i]
         end
         x_converged, f_converged, gr_converged, converged = assess_convergence(x, xold, results.f_minimum, fval0, g, xtol, ftol, grtol)
         if converged
