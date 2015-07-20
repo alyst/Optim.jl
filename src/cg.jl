@@ -118,7 +118,7 @@ function cg{T}(df::Union{DifferentiableFunction,
                linesearch!::Function = hz_linesearch!,
                eta::Real = convert(T,0.4),
                P::Any = nothing,
-               precondprep::Function = (P, x) -> nothing)
+               precondprep = (P, x) -> nothing)
 
     # Maintain current state in x and previous state in x_previous
     x, x_previous = copy(initial_x), copy(initial_x)
