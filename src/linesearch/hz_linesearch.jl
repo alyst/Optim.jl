@@ -199,7 +199,7 @@ function hz_linesearch!{T}(df::Union{DifferentiableFunction,
         g_calls += g_up
     end
     if !(isfinite(phic) && isfinite(dphic))
-        println("Warning: failed to achieve finite new evaluation point, using alpha=0")
+        warn("failed to achieve finite new evaluation point, using alpha=0")
         return zero(T), f_calls, g_calls # phi0
     end
     push!(lsr, c, phic, dphic)
@@ -291,8 +291,8 @@ function hz_linesearch!{T}(df::Union{DifferentiableFunction,
                 # from it still doesn't turn the slope upward, or
                 # mistakes in the user's function.
                 if iterfinite >= iterfinitemax
-                    println("Warning: failed to expand interval to bracket with finite values. If this happens frequently, check your function and gradient.")
-                    println("c = ", c,
+                    warn("failed to expand interval to bracket with finite values. If this happens frequently, check your function and gradient.\n",
+                         "c = ", c,
                             ", alphamax = ", alphamax,
                             ", phic = ", phic,
                             ", dphic = ", dphic)
