@@ -205,51 +205,56 @@ function Base.append!(a::MultivariateOptimizationResults, b::MultivariateOptimiz
     a.g_calls += b.g_calls
 end
 
-# TODO: Expose ability to do forward and backward differencing
-function DifferentiableFunction(f::Function)
-    function g!(x::Array, storage::Array)
-        Calculus.finite_difference!(f, x, storage, :central)
-        return
-    end
-    function fg!(x::Array, storage::Array)
-        g!(x, storage)
-        return f(x)
-    end
-    return DifferentiableFunction(f, g!, fg!)
+# Using finite difference to approximate the gradient
+immutable FiniteDifferenceDifferentiableFunction <: DifferentiableFunction
+    f::Function
+    kind::Symbol # :central :forward :backward
 end
 
-function DifferentiableFunction(f::Function, g!::Function)
-    function fg!(x::Array, storage::Array)
-        g!(x, storage)
-        return f(x)
-    end
-    return DifferentiableFunction(f, g!, fg!)
+evalg!(f::FiniteDifferenceDifferentiableFunction, x::Array, grad::Array) = Calculus.finite_difference!(f.f, x, grad, f.kind)
+function evalfg!(f::FiniteDifferenceDifferentiableFunction, x::Array, grad::Array)
+    Calculus.finite_difference!(f.f, x, grad, f.kind)
+    return f.f(x)
 end
 
-function TwiceDifferentiableFunction(f::Function)
-    function g!(x::Vector, storage::Vector)
-        Calculus.finite_difference!(f, x, storage, :central)
-        return
-    end
-    function fg!(x::Vector, storage::Vector)
-        g!(x, storage)
-        return f(x)
-    end
-    function h!(x::Vector, storage::Matrix)
-        Calculus.finite_difference_hessian!(f, x, storage)
-        return
-    end
-    return TwiceDifferentiableFunction(f, g!, fg!, h!)
+Base.convert(::Type{DifferentiableFunction}, f::Function, kind::Symbol=:central) = FiniteDifferenceDifferentiableFunction(f, kind)
+
+immutable ComposeFG!DifferentiableFunction <: DifferentiableFunction
+    f::Function
+    g!::Function
 end
 
-function TwiceDifferentiableFunction(f::Function,
-                                     g!::Function,
-                                     h!::Function)
-    function fg!(x::Vector, storage::Vector)
-        g!(x, storage)
-        return f(x)
-    end
-    return TwiceDifferentiableFunction(f, g!, fg!, h!)
+Base.convert(::Type{DifferentiableFunction}, f::Function, g!::Function) = ComposeFG!DifferentiableFunction(f, g!)
+
+function evalfg!(f::ComposeFG!DifferentiableFunction, x::Array, grad::Array)
+    evalg!(f, x, grad)
+    return evalf(f, x)
+end
+
+# Using finite difference to approximate the gradient and hessian
+immutable FiniteDifferenceTwiceDifferentiableFunction <: TwiceDifferentiableFunction
+    f::Function
+    kind::Symbol # :central :forward :backward
+end
+
+evalg!(f::FiniteDifferenceTwiceDifferentiableFunction, x::Array, grad::Array) = Calculus.finite_difference!(f.f, x, grad, f.kind)
+function evalfg!(f::FiniteDifferenceTwiceDifferentiableFunction, x::Array, grad::Array)
+    Calculus.finite_difference!(f.f, x, grad, f.kind)
+    return f.f(x)
+end
+evalh!(f::FiniteDifferenceTwiceDifferentiableFunction, x::Array, grad::Array) = Calculus.finite_difference_hessian!(f, x, grad)
+
+immutable ComposeFG!TwiceDifferentiableFunction <: DifferentiableFunction
+    f::Function
+    g!::Function
+    h!::Function
+end
+
+Base.convert(::Type{TwiceDifferentiableFunction}, f::Function, g!::Function, h!::Function) = ComposeFG!TwiceDifferentiableFunction(f, g!)
+
+function evalfg!(f::ComposeFG!TwiceDifferentiableFunction, x::Array, grad::Array)
+    evalg!(f, x, grad)
+    return evalf(f, x)
 end
 
 # A cache for results from line search methods (to avoid recomputation)
