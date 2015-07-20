@@ -1,3 +1,18 @@
+immutable NNLSObjective{T<:FloatingPoint} <: DifferentiableFunction
+    A::AbstractMatrix{T}
+    b::AbstractVector{T}
+end
+
+discrepancy{T<:FloatingPoint}(nnls::NNLSObjective{T}, x::AbstractVector{T}) = nnls.A*x - nnls.b
+
+evalf{T<:FloatingPoint}(nnls::NNLSObjective{T}, x::AbstractVector{T}) = sum(discrepancy(nnls, x).^2)/2
+evalg!{T<:FloatingPoint}(nnls::NNLSObjective{T}, x::AbstractVector{T}, g::AbstractVector{T}) = At_mul_B!(g, nnls.A, discrepancy(nnls, x))
+function evalfg!{T<:FloatingPoint}(nnls::NNLSObjective{T}, x::AbstractVector{T}, g::AbstractVector{T})
+    d = discrepancy(nnls, x)
+    At_mul_B!(g, nnls.A, d)
+    return sum(d.^2)/2
+end
+
 function nnls(A::AbstractMatrix, b::AbstractVector)
     # Set up the preconditioner as the inverse diagonal of the Hessian
     a = sum(A.^2, 1)
@@ -7,19 +22,8 @@ function nnls(A::AbstractMatrix, b::AbstractVector)
     # Set up constraints
     l = zeros(eltype(x), length(x))
     u = fill(convert(eltype(x), Inf), length(x))
-    # Perform the optimization    
-    func = (x, g) -> nnlsobjective(x, g, A, b)
-    df = DifferentiableFunction(x->func(x,nothing), func, func)
-    fminbox(df, x, l, u, precondprep=(P, x, l, u, mu)->precondprepnnls(P, x, mu, a))
-end
-
-function nnlsobjective(x::AbstractVector, g, A::AbstractMatrix, b::AbstractVector)
-    d = A*x - b
-    val = sum(d.^2)/2
-    if !(g === nothing)
-        At_mul_B!(g, A, d)
-    end
-    val
+    # Perform the optimization
+    fminbox(NNLSObjective{T}(A, b), x, l, u, precondprep=(P, x, l, u, mu)->precondprepnnls(P, x, mu, a))
 end
 
 function precondprepnnls(P, x, mu, a)
