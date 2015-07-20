@@ -87,16 +87,17 @@ end
 # a differentiable function
 abstract DifferentiableFunction
 
+# default implementation of DifferentiableFunction interface
+evalf(df::DifferentiableFunction, x) = df.f(x)
+evalg!(df::DifferentiableFunction, x, grad) = df.g!(x, grad)
+evalfg!(df::DifferentiableFunction, x, grad) = df.fg!(x, grad)
+
 # Implementation of DifferentialFunction based on Function objects
 immutable SimpleDifferentiableFunction <: DifferentiableFunction
     f::Function
     g!::Function
     fg!::Function
 end
-
-evalf(df::SimpleDifferentiableFunction, x) = df.f(x)
-evalg!(df::SimpleDifferentiableFunction, x, grad) = df.g!(x, grad)
-evalfg!(df::SimpleDifferentiableFunction, x, grad) = df.fg!(x, grad)
 
 Base.convert(::Type{DifferentiableFunction}, f::Function, g!::Function, fg!::Function) = SimpleDifferentiableFunction(f, g!, fg!)
 
@@ -133,9 +134,6 @@ end
 
 Base.convert(::Type{TwiceDifferentiableFunction}, f::Function, g!::Function, fg!::Function, h!::Function) = SimpleTwiceDifferentiableFunction(f, g!, fg!, h!)
 
-evalf(df::SimpleTwiceDifferentiableFunction, x) = df.f(x)
-evalg!(df::SimpleTwiceDifferentiableFunction, x, grad) = df.g!(x, grad)
-evalfg!(df::SimpleTwiceDifferentiableFunction, x, grad) = df.fg!(x, grad)
 evalh!(df::SimpleTwiceDifferentiableFunction, x, hessian) = df.h!(x, hessian)
 
 if VERSION >= v"0.4-"
