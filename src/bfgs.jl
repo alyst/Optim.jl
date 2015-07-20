@@ -68,7 +68,7 @@ function bfgs{T}(d::Union{DifferentiableFunction,
     x_ls, gr_ls = Array(T, n), Array(T, n)
 
     # Store f(x) in f_x
-    f_x_previous, f_x = NaN, d.fg!(x, gr)
+    f_x_previous, f_x = NaN, evalfg!(d, x, gr)
     f_calls, g_calls = f_calls + 1, g_calls + 1
     copy!(gr_previous, gr)
 
@@ -139,7 +139,7 @@ function bfgs{T}(d::Union{DifferentiableFunction,
         copy!(gr_previous, gr)
 
         # Update the function value and gradient
-        f_x_previous, f_x = f_x, d.fg!(x, gr)
+        f_x_previous, f_x = f_x, evalfg!(d, x, gr)
         f_calls, g_calls = f_calls + 1, g_calls + 1
 
         x_converged,
