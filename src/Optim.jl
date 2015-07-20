@@ -7,6 +7,7 @@ module Optim
     using ForwardDiff
     import Compat.String
     import Compat.view
+    import Compat.AbstractFloat
 
     import Base.length,
            Base.push!,
