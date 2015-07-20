@@ -181,7 +181,7 @@ function hz_linesearch!{T}(df::Union{DifferentiableFunction,
 
     phi0 = lsr.value[1]
     dphi0 = lsr.slope[1]
-    (isfinite(phi0) && isfinite(dphi0)) || error("Initial value and slope must be finite")
+    (isfinite(phi0) && isfinite(dphi0)) || throw(ArgumentError("Initial value and slope must be finite"))
     philim = phi0 + epsilon * abs(phi0)
     @assert c > 0
     @assert isfinite(c) && c <= alphamax
