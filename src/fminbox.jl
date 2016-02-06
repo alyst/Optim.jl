@@ -268,8 +268,7 @@ function optimize{T<:AbstractFloat}(
             @inbounds g[i] = dfbox.gfunc[i] + dfbox.mu*dfbox.gbarrier[i]
         end
 
-        x_converged, f_converged, g_converged, converged = assess_convergence(x, xold, results.f_minimum, fval0, g, x_tol, f_tol, g_tol)
-
+        results.x_converged, results.f_converged, results.g_converged, converged = assess_convergence(x, xold, results.f_minimum, fval0, g, x_tol, f_tol, g_tol)
     end
     results.method = "Fminbox with $(results.method)"
     results.iterations = iteration
