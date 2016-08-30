@@ -62,7 +62,7 @@ function optimize{T}(d::DifferentiableFunction,
     g_ls = similar(x)
 
     # Store f(x) in f_x
-    f_x_previous, f_x = NaN, d.fg!(x, g)
+    f_x_previous, f_x = NaN, evalfg!(d, x, g)
     f_calls, g_calls = f_calls + 1, g_calls + 1
 
     # Keep track of step-sizes
@@ -113,7 +113,7 @@ function optimize{T}(d::DifferentiableFunction,
         LinAlg.axpy!(alpha, s, x)
 
         # Update the function value and gradient
-        f_x_previous, f_x = f_x, d.fg!(x, g)
+        f_x_previous, f_x = f_x, evalfg!(d, x, g)
         f_calls, g_calls = f_calls + 1, g_calls + 1
 
         x_converged,

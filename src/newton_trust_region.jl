@@ -262,7 +262,7 @@ function optimize{T}(d::TwiceDifferentiableFunction,
     s = Array(T, n)
 
     # Store f(x), the function value, in f_x
-    f_x_previous, f_x = NaN, d.fg!(x, gr)
+    f_x_previous, f_x = NaN, evalfg!(d, x, gr)
 
     # We need to store the previous gradient in case we reject a step.
     gr_previous = copy(gr)
@@ -271,7 +271,7 @@ function optimize{T}(d::TwiceDifferentiableFunction,
 
     # Store the hessian in H
     H = Array(T, n, n)
-    d.h!(x, H)
+    evalh!(d, x, H)
 
     # Keep track of trust region sizes
     delta = copy(mo.initial_delta)
@@ -311,7 +311,7 @@ function optimize{T}(d::TwiceDifferentiableFunction,
 
         # Update the function value and gradient
         copy!(gr_previous, gr)
-        f_x_previous, f_x = f_x, d.fg!(x, gr)
+        f_x_previous, f_x = f_x, evalfg!(d, x, gr)
         f_calls, g_calls = f_calls + 1, g_calls + 1
 
         # Update the trust region size based on the discrepancy between
@@ -353,7 +353,7 @@ function optimize{T}(d::TwiceDifferentiableFunction,
                                            o.g_tol)
             if !converged
                 # Only compute the next Hessian if we haven't converged
-                d.h!(x, H)
+                evalh!(d, x, H)
             end
         else
             # The improvement is too small and we won't take it.

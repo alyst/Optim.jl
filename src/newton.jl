@@ -58,12 +58,12 @@ function optimize{T}(d::TwiceDifferentiableFunction,
     x_ls, g_ls = Array(T, n), Array(T, n)
 
     # Store f(x) in f_x
-    f_x_previous, f_x = NaN, d.fg!(x, gr)
+    f_x_previous, f_x = NaN, evalfg!(d, x, gr)
     f_calls, g_calls = f_calls + 1, g_calls + 1
 
     # Store h(x) in H
     H = Array(T, n, n)
-    d.h!(x, H)
+    evalh!(d, x, H)
 
     # Keep track of step-sizes
     alpha = alphainit(one(T), x, gr, f_x)
@@ -115,11 +115,11 @@ function optimize{T}(d::TwiceDifferentiableFunction,
         LinAlg.axpy!(alpha, s, x)
 
         # Update the function value and gradient
-        f_x_previous, f_x = f_x, d.fg!(x, gr)
+        f_x_previous, f_x = f_x, evalfg!(d, x, gr)
         f_calls, g_calls = f_calls + 1, g_calls + 1
 
         # Update the Hessian
-        d.h!(x, H)
+        evalh!(d, x, H)
 
         x_converged,
         f_converged,
