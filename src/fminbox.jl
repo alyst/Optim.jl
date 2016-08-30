@@ -60,7 +60,7 @@ end
 @compat (fbarrier::FMinBoxBarrierBox{T}){T}(x::Array{T}, gbarrier::Array{T}) =
     barrier_box(x, gbarrier, fbarrier.l, fbarrier.u)
 
-function function_barrier{T}(x::Array{T}, gfunc, gbarrier, f::DifferentiableFunction, fbarrier::Function)
+function function_barrier{T}(x::Array{T}, gfunc, gbarrier, f::DifferentiableFunction, fbarrier::Union{Function, FMinBoxBarrierBox{T}})
     vbarrier = fbarrier(x, gbarrier)
     if isfinite(vbarrier)
         vfunc = evalfg!(f, x, gfunc)
@@ -74,14 +74,15 @@ immutable FMinBoxFunctionBarrier{T<:AbstractFloat, DF<:DifferentiableFunction}
     f::DF
     fbarrier::FMinBoxBarrierBox{T}
 
-    @compat (::Type{FMinBoxFunctionBarrier{T,DF}}){T<:AbstractFloat, DF<:DifferentiableFunction}(f::DF, l::Array{T}, u::Array{T}) =
+    @compat (::Type{FMinBoxFunctionBarrier}){T<:AbstractFloat, DF<:DifferentiableFunction}(f::DF, l::Array{T}, u::Array{T}) =
         new{T,DF}(f, FMinBoxBarrierBox{T}(l, u))
 end
 
 @compat (fb::FMinBoxFunctionBarrier{T}){T}(x::Array{T}, gfunc::Array{T}, gbarrier::Array{T}) =
     function_barrier(x, gfunc, gbarrier, fb.f, fb.fbarrier)
 
-function barrier_combined{T}(x::Array{T}, g::Union{Array{T},Void}, gfunc::Array{T}, gbarrier::Array{T}, val_each::Vector{T}, fb::Function, mu::T)
+function barrier_combined{T}(x::Array{T}, g::Union{Array{T},Void}, gfunc::Array{T}, gbarrier::Array{T}, val_each::Vector{T},
+                             fb::Union{Function, FMinBoxFunctionBarrier}, mu::T)
     calc_g = !(g === nothing)
     valfunc, valbarrier = fb(x, gfunc, gbarrier)
     val_each[1] = valfunc
@@ -102,7 +103,7 @@ type BarrierCombinedDifferentiableFunction{T<:AbstractFloat,DF<:DifferentiableFu
 
     mu::T
 
-    @compat function (::Type{BarrierCombinedDifferentiableFunction{T,DF}}){T,DF}(
+    @compat function (::Type{BarrierCombinedDifferentiableFunction}){T,DF}(
         df::DF, initial_x::Array{T}, l::Array{T}, u::Array{T},
         mu0::T, mufactor::T
     )
@@ -236,7 +237,7 @@ function optimize{T<:AbstractFloat}(
         if show_trace > 0
             println("#### Calling optimizer with mu = ", dfbox.mu, " ####")
         end
-        pcp = BarrierCombinedDifferentiableFunctionPrecondPrep(dfbox, precondprep)
+        pcp = BarrierCombinedDifferentiableFunctionPrecondPrep(dfbox, precondprep!)
         if optimizer == ConjugateGradient
             _optimizer = optimizer(eta = eta, linesearch! = linesearch!, P = P, precondprep! = pcp)
         elseif optimizer in (LBFGS, GradientDescent)

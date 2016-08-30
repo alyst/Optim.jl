@@ -22,15 +22,15 @@ macro gdtrace()
     end
 end
 
-immutable GradientDescent{T} <: Optimizer{DifferentiableFunction}
+immutable GradientDescent{T, PCP} <: Optimizer{DifferentiableFunction}
     linesearch!::Function
     P::T
-    precondprep!::Function
+    precondprep!::PCP
 end
 
 GradientDescent(; linesearch!::Function = hz_linesearch!,
                 P = nothing, precondprep! = (P, x) -> nothing) =
-                    GradientDescent(linesearch!, P, precondprep!)
+        GradientDescent{typeof(P), typeof(precondprep!)}(linesearch!, P, precondprep!)
 
 function optimize{T}(d::DifferentiableFunction,
                      initial_x::Array{T},

@@ -76,10 +76,10 @@ macro cgtrace()
     end
 end
 
-immutable ConjugateGradient{T} <: Optimizer{DifferentiableFunction}
+immutable ConjugateGradient{T,PCP} <: Optimizer{DifferentiableFunction}
     eta::Float64
     P::T
-    precondprep!::Function
+    precondprep!::PCP
     linesearch!::Function
 end
 
@@ -88,7 +88,7 @@ function ConjugateGradient(;
                            eta::Real = 0.4,
                            P::Any = nothing,
                            precondprep! = (P, x) -> nothing)
-    ConjugateGradient{typeof(P)}(Float64(eta),
+    ConjugateGradient{typeof(P), typeof(precondprep!)}(Float64(eta),
                                  P, precondprep!,
                                  linesearch!)
 end

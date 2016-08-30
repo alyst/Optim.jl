@@ -83,16 +83,16 @@ macro lbfgstrace()
     end
 end
 
-immutable LBFGS{T} <: Optimizer{DifferentiableFunction}
+immutable LBFGS{T, PCP} <: Optimizer{DifferentiableFunction}
     m::Int
     linesearch!::Function
     P::T
-    precondprep!::Function
+    precondprep!::PCP
 end
 
 LBFGS(; m::Integer = 10, linesearch!::Function = hz_linesearch!,
       P=nothing, precondprep! = (P, x) -> nothing) =
-    LBFGS(Int(m), linesearch!, P, precondprep!)
+    LBFGS{typeof(P), typeof(precondprep!)}(Int(m), linesearch!, P, precondprep!)
 
 function optimize{T}(d::DifferentiableFunction,
                      initial_x::Vector{T},
