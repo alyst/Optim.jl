@@ -4,7 +4,7 @@ let
 		if prob.isdifferentiable
 			df = DifferentiableFunction(prob.f, prob.g!)
 			res = Optim.optimize(df, prob.initial_x, method=ConjugateGradient())
-				@assert norm(Optim.minimizer(res) - prob.solutions) < 1e-2
+			@test norm(Optim.minimizer(res) - prob.solutions) < 1e-2
 		end
 	end
 
@@ -21,7 +21,7 @@ let
 	B = rand(2,2)
 	df = Optim.DifferentiableFunction(X -> objective(X, B), (X, G) -> objective_gradient!(X, G, B))
 	results = Optim.optimize(df, rand(2,2), method=ConjugateGradient())
-	@assert Optim.converged(results)
-	@assert Optim.minimum(results) < 1e-8
+	@test Optim.converged(results)
+	@test Optim.minimum(results) < 1e-8
 	end
 end

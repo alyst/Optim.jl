@@ -13,7 +13,7 @@ let
                 res = Optim.optimize(f_prob, prob.initial_x, GradientDescent(),
                                      OptimizationOptions(autodiff = use_autodiff,
                                                          iterations = iterations))
-                @assert norm(res.minimum - prob.solutions, Inf) < 1e-2
+                @test norm(res.minimum - prob.solutions, Inf) < 1e-2
             end
         end
     end
@@ -32,8 +32,8 @@ let
 
     results = Optim.optimize(d, initial_x, method=GradientDescent())
     @test_throws ErrorException Optim.x_trace(results)
-    @assert Optim.g_converged(results)
-    @assert norm(Optim.minimizer(results) - [5.0]) < 0.01
+    @test Optim.g_converged(results)
+    @test norm(Optim.minimizer(results) - [5.0]) < 0.01
 
     eta = 0.9
 
@@ -50,6 +50,6 @@ let
 
     results = Optim.optimize(d, [1.0, 1.0], method=GradientDescent())
     @test_throws ErrorException Optim.x_trace(results)
-    @assert Optim.g_converged(results)
-    @assert norm(Optim.minimizer(results) - [0.0, 0.0]) < 0.01
+    @test Optim.g_converged(results)
+    @test norm(Optim.minimizer(results) - [0.0, 0.0]) < 0.01
 end

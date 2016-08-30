@@ -36,7 +36,7 @@ let
 
     results = Optim.levenberg_marquardt(frb, grb, initial_xrb)
 
-    @assert norm(Optim.minimizer(results) - [1.0, 1.0]) < 0.01
+    @test norm(Optim.minimizer(results) - [1.0, 1.0]) < 0.01
 
     # tests for #178, taken from LsqFit.jl, but stripped
     let
@@ -51,7 +51,7 @@ let
         g_lsq = Calculus.jacobian(f_lsq)
         results = Optim.levenberg_marquardt(f_lsq, g_lsq, [0.5, 0.5])
 
-        @assert norm(Optim.minimizer(results) - [1.0, 2.0]) < 0.05
+        @test norm(Optim.minimizer(results) - [1.0, 2.0]) < 0.05
     end
 
     let

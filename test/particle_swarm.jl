@@ -16,7 +16,7 @@ let
 
     res = Optim.optimize(f_s, initial_x, method=ParticleSwarm(lower, upper, n_particles),
                          iterations=100)
-    @assert norm(Optim.minimizer(res) - [5.0]) < 0.1
+    @test norm(Optim.minimizer(res) - [5.0]) < 0.1
 
     initial_x = [0.0, 0.0]
     lower = [-20., -20.]
@@ -24,7 +24,7 @@ let
     n_particles = 5
     res = Optim.optimize(rosenbrock_s, initial_x, method=ParticleSwarm(lower, upper, n_particles),
                              iterations=300)
-    @assert norm(Optim.minimizer(res) - [1.0, 1.0]) < 0.1
+    @test norm(Optim.minimizer(res) - [1.0, 1.0]) < 0.1
 
     # Add UnconstrainedProblems here; currently they take too many iterations to be
     # feasible

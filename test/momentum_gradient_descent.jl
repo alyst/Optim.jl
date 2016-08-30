@@ -12,7 +12,7 @@ let
                                                          show_trace = debug))
                 debug && @show res.minimum
                 debug && @show prob.solutions
-                @assert norm(res.minimum - prob.solutions, Inf) < 1e-2
+                @test norm(res.minimum - prob.solutions, Inf) < 1e-2
             end
         end
     end

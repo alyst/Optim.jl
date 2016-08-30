@@ -8,7 +8,7 @@ let
 		elseif name == "Large Polynomial"
 			res = Optim.optimize(f_prob, prob.initial_x, method=NelderMead(initial_simplex = Optim.AffineSimplexer(1.,1.)), iterations = 500_000)
 		end
-		@assert norm(res.minimum - prob.solutions) < 1e-2
+		@test norm(res.minimum - prob.solutions) < 1e-2
 	end
 end
 

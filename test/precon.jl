@@ -36,7 +36,7 @@ let
                 if (Optimiser == GradientDescent) && (N > 15) && (P == ID)
                     println("    (gradient descent is not expected to converge)")
                 else
-                    @assert Optim.converged(results)
+                    @test Optim.converged(results)
                 end
             end
         end

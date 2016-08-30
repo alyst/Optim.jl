@@ -13,5 +13,5 @@ let
 	d = DifferentiableFunction(f, g!)
 
 	t, f_up, g_up = Optim.backtracking_line_search!(d, x, dx, ls_x, ls_gradient)
-	@assert f(x + t * dx) < f(x) + 0.9 * t * -dot(gradient, dx)
+	@test f(x + t * dx) < f(x) + 0.9 * t * -dot(gradient, dx)
 end
