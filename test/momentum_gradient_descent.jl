@@ -4,9 +4,8 @@ let
         for (name, prob) in Optim.UnconstrainedProblems.examples
             if prob.isdifferentiable && !(name in ("Polynomial", "Large Polynomial", "Himmelblau")) # it goes in a direction of ascent -> f_converged == true
                 debug && @ show "** Name: $name"
-                f_prob = prob.f
                 iterations = name == "Powell" ? 2000 : 1000
-                res = Optim.optimize(f_prob, prob.initial_x, MomentumGradientDescent(),
+                res = Optim.optimize(prob.f, prob.g!, prob.initial_x, MomentumGradientDescent(),
                                      OptimizationOptions(autodiff = use_autodiff,
                                                          iterations = iterations,
                                                          show_trace = debug))

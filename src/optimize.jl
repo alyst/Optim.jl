@@ -103,19 +103,20 @@ function optimize(d::TwiceDifferentiableFunction,
     optimize(d, initial_x, method, options)
 end
 
-function optimize(d,
-                  initial_x::Array,
-                  method::Optimizer,
-                  options::OptimizationOptions = OptimizationOptions())
-    optimize(d, initial_x, method, options)
-end
+const error_no_hessian_provided = "No gradient or Hessian was provided. Either provide a gradient and Hessian, set autodiff = true in the OptimizationOptions if applicable, or choose a solver that doesn't require a Hessian."
 
 function optimize(f::Function,
                   g!::Function,
                   initial_x::Array,
                   method::Optimizer,
                   options::OptimizationOptions = OptimizationOptions())
-    d = DifferentiableFunction(f, g!)
+    if issubtype(DifferentiableFunction, required_ftype(method))
+        d = DifferentiableFunction(f, g!)
+    elseif options.autodiff
+        d = AutodiffFunction(f, g!)
+    else
+        error(error_no_hessian_provided)
+    end
     optimize(d, initial_x, method, options)
 end
 
@@ -129,90 +130,35 @@ function optimize(f::Function,
     optimize(d, initial_x, method, options)
 end
 
-function optimize{T}(f::Function,
-                  initial_x::Array{T},
-                  method::Optimizer,
-                  options::OptimizationOptions)
-    if !options.autodiff
-        d = DifferentiableFunction(f)
-    else
-        g!(x, out) = ForwardDiff.gradient!(out, f, x)
-
-        function fg!(x, out)
-            gr_res = ForwardDiff.GradientResult(zero(T),out)
-            ForwardDiff.gradient!(gr_res, f, x)
-            ForwardDiff.value(gr_res)
-        end
-        d = DifferentiableFunction(f, g!, fg!)
-    end
-    optimize(d, initial_x, method, options)
-end
-
-function optimize{T}(f::Function,
-                  initial_x::Array{T},
-                  method::Union{Newton, NewtonTrustRegion},
-                  options::OptimizationOptions)
-    if !options.autodiff
-        error("No gradient or Hessian was provided. Either provide a gradient and Hessian, set autodiff = true in the OptimizationOptions if applicable, or choose a solver that doesn't require a Hessian.")
-    else
-        g!(x, out) = ForwardDiff.gradient!(out, f, x)
-
-        function fg!(x, out)
-            gr_res = ForwardDiff.GradientResult(zero(T),out)
-            ForwardDiff.gradient!(gr_res, f, x)
-            ForwardDiff.value(gr_res)
-        end
-
-        h! = (x, out) -> ForwardDiff.hessian!(out, f, x)
-        d = TwiceDifferentiableFunction(f, g!, fg!, h!)
-    end
-    optimize(d, initial_x, method, options)
-end
-
 function optimize(f::Function,
-                  g!::Function,
-                  initial_x::Array,
-                  method::Union{Newton, NewtonTrustRegion},
-                  options::OptimizationOptions)
-    if !options.autodiff
-        error("No Hessian was provided. Either provide a Hessian, set autodiff = true in the OptimizationOptions if applicable, or choose a solver that doesn't require a Hessian.")
-    else
-        function fg!(x, out)
-            g!(x, out)
-            f(x)
-        end
-
-        h! = (x, out) -> ForwardDiff.hessian!(out, f, x)
-        d = TwiceDifferentiableFunction(f, g!, fg!, h!)
-    end
-    optimize(d, initial_x, method, options)
-end
-
-function optimize(d::DifferentiableFunction,
-                  initial_x::Array,
-                  method::Union{Newton, NewtonTrustRegion},
-                  options::OptimizationOptions)
-    if !options.autodiff
-        error("No Hessian was provided. Either provide a Hessian, set autodiff = true in the OptimizationOptions if applicable, or choose a solver that doesn't require a Hessian.")
-    else
-        h! = (x, out) -> ForwardDiff.hessian!(out, d.f, x)
-    end
-    optimize(TwiceDifferentiableFunction(d.f, d.g!, d.fg!, h!), initial_x, method, options)
-end
-
-function optimize(d::DifferentiableFunction,
                   initial_x::Array,
                   method::Optimizer,
-                  options::OptimizationOptions)
-    optimize(d.f, initial_x, method, options)
+                  options::OptimizationOptions = OptimizationOptions())
+    if isa(Any, required_ftype(method))
+        # function doesn't need gradient
+        return optimize(f, initial_x, method, options)
+    elseif options.autodiff
+        return optimize(AutodiffFunction(f), initial_x, method, options)
+    else
+        error(error_no_hessian_provided)
+    end
 end
 
-function optimize(d::TwiceDifferentiableFunction,
+function optimize(f::DifferentiableFunction,
                   initial_x::Array,
                   method::Optimizer,
-                  options::OptimizationOptions)
-    dn = DifferentiableFunction(d.f, d.g!, d.fg!)
-    optimize(dn, initial_x, method, options)
+                  options::OptimizationOptions = OptimizationOptions())
+    if issubtype(Any, required_ftype(method))
+        # accepts any function, so we need to extract evalf(f)
+        return optimize(evalf_func(f), initial_x, method, options)
+    elseif isa(f, required_ftype(method))
+        # should be handled by more method-specific optimize(), so something is not right
+        error("optimize() method specific to $(method) and $f not found")
+    elseif options.autodiff
+        return optimize(AutodiffFunction(f), initial_x, method, options)
+    else
+        error(error_no_hessian_provided)
+    end
 end
 
 function optimize{T <: AbstractFloat}(f::Function,

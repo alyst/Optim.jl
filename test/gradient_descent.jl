@@ -2,7 +2,6 @@ let
     for use_autodiff in (false, true)
         for (name, prob) in Optim.UnconstrainedProblems.examples
             if prob.isdifferentiable
-                f_prob = prob.f
                 iterations = if name == "Rosenbrock"
                         5000 # Zig-zagging
                     elseif name == "Powell"
@@ -10,7 +9,7 @@ let
                     else
                         1000
                 end
-                res = Optim.optimize(f_prob, prob.initial_x, GradientDescent(),
+                res = Optim.optimize(prob.f, prob.g!, prob.initial_x, GradientDescent(),
                                      OptimizationOptions(autodiff = use_autodiff,
                                                          iterations = iterations))
                 @test norm(res.minimum - prob.solutions, Inf) < 1e-2

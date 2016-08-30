@@ -103,48 +103,43 @@ type UnivariateOptimizationResults{T,M} <: OptimizationResults
     f_calls::Int
 end
 
-# Interface for evaluating the value and the gradient of
-# a differentiable function
+"""
+    Interface for evaluating the value and the gradient of
+    a differentiable function.
+"""
 abstract DifferentiableFunction
 
-# default implementation of DifferentiableFunction interface
-evalf(df::DifferentiableFunction, x) = df.f(x)
-evalg!(df::DifferentiableFunction, x, grad) = df.g!(x, grad)
-evalfg!(df::DifferentiableFunction, x, grad) = df.fg!(x, grad)
+# default implementation
+evalf(f::DifferentiableFunction, x) = f.f(x)
+evalg!(f::DifferentiableFunction, x, grad) = f.g!(x, grad)
+evalfg!(f::DifferentiableFunction, x, grad) = f.fg!(x, grad)
 
-# Implementation of DifferentialFunction based on Function objects
+"""
+    Interface for evaluating the value, gradient and Hessian of
+    a twice differentiable function.
+"""
+abstract TwiceDifferentiableFunction <: DifferentiableFunction
+
+# default implementation
+evalh!(f::TwiceDifferentiableFunction, x, hessian) = f.h!(x, hessian)
+
+"""
+    Implementation of `DifferentialFunction` based on user-defined
+    functions.
+"""
 immutable SimpleDifferentiableFunction <: DifferentiableFunction
     f::Function
     g!::Function
     fg!::Function
 end
 
-Base.convert(::Type{DifferentiableFunction}, f::Function, g!::Function, fg!::Function) = SimpleDifferentiableFunction(f, g!, fg!)
+DifferentiableFunction(f::Function, g!::Function, fg!::Function = (x, out) -> (g!(x, out); f(x))) =
+    SimpleDifferentiableFunction(f, g!, fg!)
 
-if VERSION >= v"0.4-"
-# Callable wrapper of DifferentiableFunction
-# that evaluates the function properties specified by WHAT parameter
-immutable DifferentiableFunctionEval{WHAT, DF<:DifferentiableFunction}
-    df::DF
-end
-
-# "function"-like object that evaluates f(x)
-evalf_func{DF<:DifferentiableFunction}(df::DF) = DifferentiableFunctionEval{:F, DF}(df)
-# "function"-like object that evaluates the gradient of f(x)
-evalg!_func{DF<:DifferentiableFunction}(df::DF) = DifferentiableFunctionEval{:G!, DF}(df)
-# "function"-like object that evaluates the value and gradient of f(x)
-evalfg!_func{DF<:DifferentiableFunction}(df::DF) = DifferentiableFunctionEval{:FG!, DF}(df)
-
-Base.call(dfevalf::DifferentiableFunctionEval{:F}, x) = evalf(dfevalf.df, x)
-Base.call(dfevalf::DifferentiableFunctionEval{:G!}, x, grad) = evalfg!(dfevalf.df, x, grad)
-Base.call(dfevalf::DifferentiableFunctionEval{:FG!}, x, grad) = evalfg!(dfevalf.df, x, grad)
-end
-
-# Interface for evaluating the value, gradient and Hessian of
-# a twice differentiable function
-abstract TwiceDifferentiableFunction <: DifferentiableFunction
-
-# Implementation of TwoceDifferentialFunction based on Function objects
+"""
+    Implementation of TwoceDifferentialFunction based on user-defined
+    functions.
+"""
 immutable SimpleTwiceDifferentiableFunction <: TwiceDifferentiableFunction
     f::Function
     g!::Function
@@ -152,21 +147,25 @@ immutable SimpleTwiceDifferentiableFunction <: TwiceDifferentiableFunction
     h!::Function
 end
 
-Base.convert(::Type{TwiceDifferentiableFunction}, f::Function, g!::Function, fg!::Function, h!::Function) = SimpleTwiceDifferentiableFunction(f, g!, fg!, h!)
+typealias SimpleSingleOrTwiceDiffFunc Union{SimpleDifferentiableFunction, SimpleTwiceDifferentiableFunction}
 
-evalh!(df::SimpleTwiceDifferentiableFunction, x, hessian) = df.h!(x, hessian)
+TwiceDifferentiableFunction(f::Function, g!::Function, fg!::Function, h!::Function) =
+    SimpleTwiceDifferentiableFunction(f, g!, fg!, h!)
 
-if VERSION >= v"0.4-"
-# Callable wrapper of TwiceDifferentiableFunction
-# that evaluates the function properties specified by WHAT parameter
-# (only :H as all other properties are already handled by DifferentiableFunctionEval)
-immutable TwiceDifferentiableFunctionEval{WHAT, DF<:TwiceDifferentiableFunction}
-    df::DF
-end
+TwiceDifferentiableFunction(f::Function, g!::Function, h!::Function) =
+    SimpleTwiceDifferentiableFunction(f, g!, (x, out) -> (g!(x, out); f(x)), h!)
 
-evalh!_func{DF<:TwiceDifferentiableFunction}(df::DF) = TwiceDifferentiableFunctionEval{:H!, DF}(df)
-Base.call(dfevalf::TwiceDifferentiableFunctionEval{:H!}, x, hessian) = evalh!(dfevalf.df, x, hessian)
-end
+# FIXME might be slow on v0.4
+evalf_func(f::DifferentiableFunction) = x -> evalf(f, x)
+evalg!_func(f::DifferentiableFunction) = (x, out) -> evalg!(f, x, out)
+evalfg!_func(f::DifferentiableFunction) = (x, out) -> evalfg!(f, x, out)
+evalh!_func(f::TwiceDifferentiableFunction) = (x, out) -> evalh!(f, x, out)
+
+# faster alternative for SimpleDifferentiableFunction
+evalf_func(f::SimpleSingleOrTwiceDiffFunc) = f.f
+evalg!_func(f::SimpleSingleOrTwiceDiffFunc) = f.g!
+evalfg!_func(f::SimpleSingleOrTwiceDiffFunc) = f.fg!
+evalh!_func(f::SimpleTwiceDifferentiableFunction) = f.h!
 
 function Base.show(io::IO, t::OptimizationState)
     @printf io "%6d   %14e   %14e\n" t.iteration t.value t.g_norm
@@ -177,6 +176,45 @@ function Base.show(io::IO, t::OptimizationState)
     end
     return
 end
+
+abstract AutodiffFunction <: TwiceDifferentiableFunction
+
+"""
+    Autodiff-based `DifferentiableFunction` implementation.
+"""
+immutable AutoGHFunction <: AutodiffFunction
+    f::Function
+end
+
+AutodiffFunction(f::Function) = AutoGHFunction(f)
+
+evalg!(f::AutoGHFunction, x, out) = ForwardDiff.gradient!(out, f.f, x)
+
+function evalfg!(f::AutoGHFunction, x, out)
+    gr_res = ForwardDiff.GradientResult(zero(eltype(out)), out)
+    ForwardDiff.gradient!(gr_res, f.f, x)
+    return ForwardDiff.value(gr_res)
+end
+
+evalh!(f::AutoGHFunction, x, out) = ForwardDiff.hessian!(out, f.f, x)
+
+"""
+    Autodiff-based `DifferentiableFunction` implementation,
+    when gradient is user-defined.
+"""
+immutable AutoHFunction <: AutodiffFunction
+    f::Function
+    g!::Function
+    fg!::Function
+end
+
+AutodiffFunction(f::Function, g!::Function, fg!::Function = (x, out) -> (g!(x, out); f(x)) ) =
+    AutoHFunction(f, g!, fg!)
+AutodiffFunction(f::SimpleDifferentiableFunction) = AutoHFunction(f.f, f.g!, f.fg!)
+
+# FIXME calculate evalh!(AutoHFunction) as gradient of g!?
+
+evalh!(f::AutoHFunction, x, out) = ForwardDiff.hessian!(out, f.f, x)
 
 function Base.show(io::IO, tr::OptimizationTrace)
     @printf io "Iter     Function value   Gradient norm \n"
@@ -244,18 +282,16 @@ function Base.append!(a::MultivariateOptimizationResults, b::MultivariateOptimiz
 end
 
 # Using finite difference to approximate the gradient
-immutable FiniteDifferenceDifferentiableFunction <: DifferentiableFunction
+immutable FiniteDiffFunction <: DifferentiableFunction
     f::Function
     kind::Symbol # :central :forward :backward
 end
 
-evalg!(f::FiniteDifferenceDifferentiableFunction, x::Array, grad::Array) = Calculus.finite_difference!(f.f, x, grad, f.kind)
-function evalfg!(f::FiniteDifferenceDifferentiableFunction, x::Array, grad::Array)
+evalg!(f::FiniteDiffFunction, x::Array, grad::Array) = Calculus.finite_difference!(f.f, x, grad, f.kind)
+function evalfg!(f::FiniteDiffFunction, x::Array, grad::Array)
     Calculus.finite_difference!(f.f, x, grad, f.kind)
     return f.f(x)
 end
-
-Base.convert(::Type{DifferentiableFunction}, f::Function, kind::Symbol=:central) = FiniteDifferenceDifferentiableFunction(f, kind)
 
 immutable ComposeFG!DifferentiableFunction <: DifferentiableFunction
     f::Function

@@ -6,29 +6,27 @@ let
     h! = rosenbrock.h!
     initial_x = rosenbrock.initial_x
 
-    d1 = DifferentiableFunction(f)
     d2 = DifferentiableFunction(f, g!)
     d3 = TwiceDifferentiableFunction(f, g!, h!)
 
-    Optim.optimize(f, initial_x, BFGS())
+    @test_throws ErrorException Optim.optimize(f, initial_x, BFGS())
     Optim.optimize(f, g!, initial_x, BFGS())
     Optim.optimize(f, g!, h!, initial_x, BFGS())
     Optim.optimize(d2, initial_x, BFGS())
     Optim.optimize(d3, initial_x, BFGS())
 
-    Optim.optimize(f, initial_x, BFGS(), OptimizationOptions())
+    @test_throws ErrorException Optim.optimize(f, initial_x, BFGS(), OptimizationOptions())
     Optim.optimize(f, g!, initial_x, BFGS(), OptimizationOptions())
     Optim.optimize(f, g!, h!, initial_x, BFGS(), OptimizationOptions())
     Optim.optimize(d2, initial_x, BFGS(), OptimizationOptions())
     Optim.optimize(d3, initial_x, BFGS(), OptimizationOptions())
 
-    Optim.optimize(d1, initial_x, method = BFGS())
     Optim.optimize(d2, initial_x, method = BFGS())
 
-    Optim.optimize(d1, initial_x, method = GradientDescent())
+    @test_throws ErrorException Optim.optimize(f, initial_x, method = GradientDescent())
     Optim.optimize(d2, initial_x, method = GradientDescent())
 
-    Optim.optimize(d1, initial_x, method = LBFGS())
+    @test_throws ErrorException Optim.optimize(f, initial_x, method = LBFGS())
     Optim.optimize(d2, initial_x, method = LBFGS())
 
     Optim.optimize(f, initial_x, method = NelderMead())
@@ -37,18 +35,16 @@ let
 
     Optim.optimize(f, initial_x, method = SimulatedAnnealing())
 
-    optimize(f, initial_x, method = BFGS())
-    optimize(f, initial_x, BFGS())
     optimize(f, g!, initial_x, method = BFGS())
     optimize(f, g!, h!, initial_x, method = BFGS())
 
-    optimize(f, initial_x, method = GradientDescent())
-    optimize(f, initial_x, GradientDescent())
+    @test_throws ErrorException optimize(f, initial_x, method = GradientDescent())
+    @test_throws ErrorException optimize(f, initial_x, GradientDescent())
     optimize(f, g!, initial_x, method = GradientDescent())
     optimize(f, g!, h!, initial_x, method = GradientDescent())
 
-    optimize(f, initial_x, method = LBFGS())
-    optimize(f, initial_x, LBFGS())
+    @test_throws ErrorException optimize(f, initial_x, method = LBFGS())
+    @test_throws ErrorException optimize(f, initial_x, LBFGS())
     optimize(f, g!, initial_x, method = LBFGS())
     optimize(f, g!, h!, initial_x, method = LBFGS())
 
