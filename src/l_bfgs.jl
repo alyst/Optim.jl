@@ -83,7 +83,7 @@ macro lbfgstrace()
     end
 end
 
-immutable LBFGS{T} <: Optimizer
+immutable LBFGS{T} <: Optimizer{DifferentiableFunction}
     m::Int
     linesearch!::Function
     P::T

@@ -179,7 +179,7 @@ end
 const PARAMETERS_MU = one64<<display_nextbit
 display_nextbit += 1
 
-immutable Fminbox <: Optimizer end
+immutable Fminbox <: Optimizer{DifferentiableFunction} end
 
 function optimize{T<:AbstractFloat}(
         df::DifferentiableFunction,

@@ -38,11 +38,10 @@ FixedParameters(; α = 1.0, β = 2.0, γ = 0.5, δ = 0.5) = FixedParameters(α, 
 parameters(P::FixedParameters, n::Integer) = (P.α, P.β, P.γ, P.δ)
 
 
-immutable NelderMead{Ts <: Simplexer, Tp <: NMParameters} <: Optimizer
+immutable NelderMead{Ts <: Simplexer, Tp <: NMParameters} <: Optimizer{Any}
     initial_simplex::Ts
     parameters::Tp
 end
-
 
 function NelderMead(; kwargs...)
     KW = Dict(kwargs)

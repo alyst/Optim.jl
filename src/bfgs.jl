@@ -25,7 +25,7 @@ macro bfgstrace()
     end
 end
 
-immutable BFGS <: Optimizer
+immutable BFGS <: Optimizer{DifferentiableFunction}
     linesearch!::Function
 end
 

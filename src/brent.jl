@@ -20,7 +20,7 @@ macro brenttrace()
     end
 end
 
-immutable Brent <: Optimizer end
+immutable Brent <: Optimizer{Any} end
 
 function optimize{T <: AbstractFloat}(
         f::Function, x_lower::T, x_upper::T,

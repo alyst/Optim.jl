@@ -1,4 +1,4 @@
-immutable LevenbergMarquardt <: Optimizer end
+immutable LevenbergMarquardt <: Optimizer{DifferentiableFunction} end
 
 """
     `levenberg_marquardt(f, g, initial_x; <keyword arguments>`

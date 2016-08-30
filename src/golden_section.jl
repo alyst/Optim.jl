@@ -20,7 +20,7 @@ macro goldensectiontrace()
     end
 end
 
-immutable GoldenSection <: Optimizer end
+immutable GoldenSection <: Optimizer{Any} end
 
 function optimize{T <: AbstractFloat}(f::Function, x_lower::T, x_upper::T,
                                       mo::GoldenSection;

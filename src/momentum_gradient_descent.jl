@@ -23,7 +23,7 @@ macro mgdtrace()
     end
 end
 
-immutable MomentumGradientDescent <: Optimizer
+immutable MomentumGradientDescent <: Optimizer{DifferentiableFunction}
     mu::Float64
     linesearch!::Function
 end

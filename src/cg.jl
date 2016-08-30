@@ -76,7 +76,7 @@ macro cgtrace()
     end
 end
 
-immutable ConjugateGradient{T} <: Optimizer
+immutable ConjugateGradient{T} <: Optimizer{DifferentiableFunction}
     eta::Float64
     P::T
     precondprep!::Function

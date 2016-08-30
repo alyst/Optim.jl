@@ -22,7 +22,7 @@ macro gdtrace()
     end
 end
 
-immutable GradientDescent{T} <: Optimizer
+immutable GradientDescent{T} <: Optimizer{DifferentiableFunction}
     linesearch!::Function
     P::T
     precondprep!::Function

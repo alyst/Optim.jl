@@ -1,4 +1,4 @@
-immutable ParticleSwarm{T} <: Optimizer
+immutable ParticleSwarm{T} <: Optimizer{Any}
     lower::Vector{T}
     upper::Vector{T}
     n_particles::Int

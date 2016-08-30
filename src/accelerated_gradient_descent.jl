@@ -28,7 +28,7 @@ macro agdtrace()
     end
 end
 
-immutable AcceleratedGradientDescent <: Optimizer
+immutable AcceleratedGradientDescent <: Optimizer{DifferentiableFunction}
     linesearch!::Function
 end
 

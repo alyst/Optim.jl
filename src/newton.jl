@@ -21,7 +21,7 @@ macro newtontrace()
     end
 end
 
-immutable Newton <: Optimizer
+immutable Newton <: Optimizer{TwiceDifferentiableFunction}
     linesearch!::Function
 end
 

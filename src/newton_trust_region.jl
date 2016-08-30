@@ -217,7 +217,7 @@ function solve_tr_subproblem!{T}(gr::Vector{T},
 end
 
 
-immutable NewtonTrustRegion{T <: Real} <: Optimizer
+immutable NewtonTrustRegion{T <: Real} <: Optimizer{TwiceDifferentiableFunction}
     initial_delta::T
     delta_hat::T
     eta::T
@@ -231,7 +231,6 @@ NewtonTrustRegion(; initial_delta::Real = 1.0,
                     rho_lower::Real = 0.25,
                     rho_upper::Real = 0.75) =
   NewtonTrustRegion(initial_delta, delta_hat, eta, rho_lower, rho_upper)
-
 
 function optimize{T}(d::TwiceDifferentiableFunction,
                      initial_x::Vector{T},

@@ -1,4 +1,24 @@
-abstract Optimizer
+"""
+    Base class for optimization method.
+
+    Type parameter `F` defines the most generic type of objective functions supported by
+    the given optimizer:
+        * `TwiceDifferentiableFunction` for Newton-like methods,
+        * `DifferentiableFunction` gradient descent-like methods
+        * `Any` for black-box optimization methods.
+"""
+abstract Optimizer{F}
+
+"""
+    required_ftype(opt::Optimizer)
+
+    Gets the most generic type of objective functions supported by
+    the given optimizer.
+
+    See `Optimizer{F}`.
+"""
+required_ftype{F}(opt::Optimizer{F}) = F
+
 immutable OptimizationOptions{TCallback <: Union{Void, Function}}
     x_tol::Float64
     f_tol::Float64

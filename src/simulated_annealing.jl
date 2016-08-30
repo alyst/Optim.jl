@@ -31,7 +31,7 @@ macro satrace()
     end
 end
 
-immutable SimulatedAnnealing <: Optimizer
+immutable SimulatedAnnealing <: Optimizer{Any}
     neighbor!::Function
     temperature::Function
     keep_best::Bool # not used!?
