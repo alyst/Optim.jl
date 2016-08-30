@@ -78,8 +78,7 @@ end
 # Code used to use phi, a 1-parameter function induced by f and s
 # Need to pass s as an explicit parameter
 function alphatry{T}(alpha::T,
-                     d::Union{DifferentiableFunction,
-                              TwiceDifferentiableFunction},
+                     d::DifferentiableFunction,
                      x::Array,
                      s::Array,
                      xtmp::Array,
@@ -154,8 +153,7 @@ function alphatry{T}(alpha::T,
     return alpha, mayterminate, f_calls, g_calls
 end
 
-function hz_linesearch!{T}(df::Union{DifferentiableFunction,
-                                     TwiceDifferentiableFunction},
+function hz_linesearch!{T}(df::DifferentiableFunction,
                            x::Array{T},
                            s::Array,
                            xtmp::Array,
@@ -386,8 +384,7 @@ function secant(lsr::LineSearchResults, ia::Integer, ib::Integer)
     return secant(lsr.alpha[ia], lsr.alpha[ib], lsr.slope[ia], lsr.slope[ib])
 end
 # phi
-function secant2!{T}(df::Union{DifferentiableFunction,
-                              TwiceDifferentiableFunction},
+function secant2!{T}(df::DifferentiableFunction,
                      x::Array,
                      s::Array,
                      xtmp::Array,
@@ -480,8 +477,7 @@ end
 # Given a third point, pick the best two that retain the bracket
 # around the minimum (as defined by HZ, eq. 29)
 # b will be the upper bound, and a the lower bound
-function update!(df::Union{DifferentiableFunction,
-                           TwiceDifferentiableFunction},
+function update!(df::DifferentiableFunction,
                  x::Array,
                  s::Array,
                  xtmp::Array,
@@ -531,8 +527,7 @@ function update!(df::Union{DifferentiableFunction,
 end
 
 # HZ, stage U3 (with theta=0.5)
-function bisect!{T}(df::Union{DifferentiableFunction,
-                              TwiceDifferentiableFunction},
+function bisect!{T}(df::DifferentiableFunction,
                     x::Array,
                     s::Array,
                     xtmp::Array,
@@ -579,8 +574,7 @@ function bisect!{T}(df::Union{DifferentiableFunction,
 end
 
 # Define one-parameter function for line searches
-function linefunc!(df::Union{DifferentiableFunction,
-                            TwiceDifferentiableFunction},
+function linefunc!(df::DifferentiableFunction,
                    x::Array,
                    s::Array,
                    alpha::Real,
