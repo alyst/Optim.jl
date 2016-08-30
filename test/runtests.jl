@@ -8,6 +8,17 @@ using Compat
 
 my_tests = [
     "types.jl",
+    "api.jl",
+    "type_stability.jl",
+    "array.jl",
+    "callbacks.jl",
+    "optimize.jl",
+
+    "constrained.jl",
+    "precon.jl",
+    "initial_convergence.jl",
+
+    # tests for individual methods
     "bfgs.jl",
     "gradient_descent.jl",
     "momentum_gradient_descent.jl",
@@ -18,19 +29,11 @@ my_tests = [
     "newton_trust_region.jl",
     "cg.jl",
     "nelder_mead.jl",
-    "optimize.jl",
     "simulated_annealing.jl",
     "particle_swarm.jl",
     "interpolating_line_search.jl",
-    "api.jl",
     "golden_section.jl",
     "brent.jl",
-    "type_stability.jl",
-    "array.jl",
-    "constrained.jl",
-    "callbacks.jl",
-    "precon.jl",
-    "initial_convergence.jl"
 ]
 
 println("Running tests:")
