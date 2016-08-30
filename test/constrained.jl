@@ -18,7 +18,7 @@ let
     boxl = 2.0
     outbox = false
     # Generate a problem where the bounds-free solution lies outside of the chosen box
-    global objective
+    local objective
     while !outbox
         A = randn(N,N)
         AtA = A'*A

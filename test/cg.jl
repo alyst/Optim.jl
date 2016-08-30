@@ -9,9 +9,9 @@ let
 	end
 
 	let
-	objective(X, B) = sum((X.-B).^2)/2
+	cg_objective(X, B) = sumabs2(X-B)/2
 
-	function objective_gradient!(X, G, B)
+	function cg_objective_gradient!(X, G, B)
 	    for i = 1:length(G)
 	        G[i] = X[i]-B[i]
 	    end
@@ -19,7 +19,7 @@ let
 
 	srand(1)
 	B = rand(2,2)
-	df = Optim.DifferentiableFunction(X -> objective(X, B), (X, G) -> objective_gradient!(X, G, B))
+	df = Optim.DifferentiableFunction(X -> cg_objective(X, B), (X, G) -> cg_objective_gradient!(X, G, B))
 	results = Optim.optimize(df, rand(2,2), method=ConjugateGradient())
 	@test Optim.converged(results)
 	@test Optim.minimum(results) < 1e-8
