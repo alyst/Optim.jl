@@ -52,7 +52,7 @@ function barrier_box{T}(x::Array{T}, g, l::Array{T}, u::Array{T})
     return v
 end
 
-immutable FMinBoxBarrierBox{T<:AbstractFloat}
+immutable FMinBoxBarrierBox{T<:AbstractFloat} <: Function
     l::Array{T}
     u::Array{T}
 end
@@ -60,7 +60,7 @@ end
 @compat (fbarrier::FMinBoxBarrierBox{T}){T}(x::Array{T}, gbarrier::Array{T}) =
     barrier_box(x, gbarrier, fbarrier.l, fbarrier.u)
 
-function function_barrier{T}(x::Array{T}, gfunc, gbarrier, f::DifferentiableFunction, fbarrier::Union{Function, FMinBoxBarrierBox{T}})
+function function_barrier{T}(x::Array{T}, gfunc, gbarrier, f::DifferentiableFunction, fbarrier::Function)
     vbarrier = fbarrier(x, gbarrier)
     if isfinite(vbarrier)
         vfunc = evalfg!(f, x, gfunc)
@@ -70,7 +70,7 @@ function function_barrier{T}(x::Array{T}, gfunc, gbarrier, f::DifferentiableFunc
     return vfunc, vbarrier
 end
 
-immutable FMinBoxFunctionBarrier{T<:AbstractFloat, DF<:DifferentiableFunction}
+immutable FMinBoxFunctionBarrier{T<:AbstractFloat, DF<:DifferentiableFunction} <: Function
     f::DF
     fbarrier::FMinBoxBarrierBox{T}
 
@@ -82,7 +82,7 @@ end
     function_barrier(x, gfunc, gbarrier, fb.f, fb.fbarrier)
 
 function barrier_combined{T}(x::Array{T}, g::Union{Array{T},Void}, gfunc::Array{T}, gbarrier::Array{T}, val_each::Vector{T},
-                             fb::Union{Function, FMinBoxFunctionBarrier}, mu::T)
+                             fb::Function, mu::T)
     calc_g = !(g === nothing)
     valfunc, valbarrier = fb(x, gfunc, gbarrier)
     val_each[1] = valfunc
@@ -167,7 +167,7 @@ function precondprepbox!(P, x, l, u, mu)
     end
 end
 
-immutable BarrierCombinedDifferentiableFunctionPrecondPrep{T<:AbstractFloat,DF<:DifferentiableFunction,PCP}
+immutable BarrierCombinedDifferentiableFunctionPrecondPrep{T<:AbstractFloat,DF<:DifferentiableFunction,PCP} <: Function
     bcdf::BarrierCombinedDifferentiableFunction{T,DF}
     precondprep::PCP
 
