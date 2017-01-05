@@ -17,36 +17,25 @@ function initial_mu(gfunc::AbstractArray{T}, gbarrier::AbstractArray{T}, mu0fact
 end
 
 function barrier_box(g, x::AbstractArray{T}, l::AbstractArray{T}, u::AbstractArray{T}) where T
-    n = length(x)
     calc_g = !(g === nothing)
 
     v = zero(T)
-    for i = 1:n
+    @inbounds for i in eachindex(x)
         thisl = l[i]
         if isfinite(thisl)
             dx = x[i] - thisl
-            if dx <= 0
-                return convert(T, Inf)
-            end
+            (dx <= zero(T)) && return convert(T, Inf)
             v -= log(dx)
-            if calc_g
-                g[i] = -one(T)/dx
-            end
+            calc_g && (g[i] = -one(T)/dx)
         else
-            if calc_g
-                g[i] = zero(T)
-            end
+            calc_g && (g[i] = zero(T))
         end
         thisu = u[i]
         if isfinite(thisu)
             dx = thisu - x[i]
-            if dx <= 0
-                return convert(T, Inf)
-            end
+            (dx <= zero(T)) && return convert(T, Inf)
             v -= log(dx)
-            if calc_g
-                g[i] += one(T)/dx
-            end
+            calc_g && (g[i] += one(T)/dx)
         end
     end
     return v
@@ -73,7 +62,7 @@ end
 
 function limits_box(x::AbstractArray{T}, d::AbstractArray{T}, l::AbstractArray{T}, u::AbstractArray{T}) where T
     alphamax = convert(T, Inf)
-    for i = 1:length(x)
+    @simd @inbounds for i in eachindex(x)
         if d[i] < 0
             @inbounds alphamax = min(alphamax, ((l[i]-x[i])+eps(l[i]))/d[i])
         elseif d[i] > 0
