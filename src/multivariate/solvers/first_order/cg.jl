@@ -152,6 +152,10 @@ function update_state!(d, state::ConjugateGradientState, method::ConjugateGradie
         # Determine the distance of movement along the search line
         lssuccess = perform_linesearch!(state, method, ManifoldObjective(method.manifold, d))
 
+        # Maintain a record of previous position
+        copy!(state.py, state.x_previous) # use py to remember x_previous
+        copy!(state.x_previous, state.x)
+
         # Update current position # x = x + alpha * s
         @. state.x = state.x + state.alpha * state.s
         retract!(method.manifold, state.x)
@@ -161,7 +165,16 @@ function update_state!(d, state::ConjugateGradientState, method::ConjugateGradie
         project_tangent!(method.manifold, gradient(d), state.x)
 
         # Check sanity of function and gradient
-        isfinite(value(d)) || error("Non-finite f(x) while optimizing ($(value(d)))")
+        if !isfinite(value(d))
+            warn("Non-finite f(x) while optimizing ($(value(d)))")
+            # rollback to the previous state
+            state.f_x_previous, state.f_x = old_f_x, state.f_x_previous
+            copy!(state.x, state.x_previous)
+            copy!(state.x_previous, state.py) # restore x_previous from py
+            copy!(state.g, state.g_previous)
+            # FIXME g_previous not restored, might affect gradient convergence
+            return true # break the method
+        end
 
         # Determine the next search direction using HZ's CG rule
         #  Calculate the beta factor (HZ2012)
