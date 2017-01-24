@@ -43,12 +43,7 @@ end
 
 function function_barrier(gfunc, gbarrier, x::AbstractArray{T}, f::F, fbarrier::FB) where {T, F<:Function, FB<:Function}
     vbarrier = fbarrier(gbarrier, x)
-    if isfinite(vbarrier)
-        vfunc = f(gfunc, x)
-    else
-        vfunc = vbarrier
-    end
-    return vfunc, vbarrier
+    return (isfinite(vbarrier) ? f(gfunc, x) : vbarrier), vbarrier
 end
 
 function barrier_combined(gfunc, gbarrier, g, x::AbstractArray{T}, fb::FB, mu::T) where {T, FB<:Function}
@@ -62,11 +57,11 @@ end
 
 function limits_box(x::AbstractArray{T}, d::AbstractArray{T}, l::AbstractArray{T}, u::AbstractArray{T}) where T
     alphamax = convert(T, Inf)
-    @simd @inbounds for i in eachindex(x)
-        if d[i] < 0
-            @inbounds alphamax = min(alphamax, ((l[i]-x[i])+eps(l[i]))/d[i])
+    @simd for i in eachindex(x)
+        @inbounds if d[i] < 0
+            alphamax = min(alphamax, ((l[i]-x[i])+eps(l[i]))/d[i])
         elseif d[i] > 0
-            @inbounds alphamax = min(alphamax, ((u[i]-x[i])-eps(u[i]))/d[i])
+            alphamax = min(alphamax, ((u[i]-x[i])-eps(u[i]))/d[i])
         end
     end
     epsilon = eps(max(alphamax, one(T)))
