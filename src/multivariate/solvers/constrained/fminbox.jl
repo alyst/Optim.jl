@@ -77,19 +77,21 @@ function precondprepbox!(P, x, l, u, mu)
     @. P.diag = 1/(mu[]*(1/(x-l)^2 + 1/(u-x)^2) + 1)
 end
 
-struct Fminbox{T, Tf, P} <: AbstractConstrainedOptimizer
-    method::T
-    mu0::Tf
-    mufactor::Tf
+struct Fminbox{O<:AbstractOptimizer, T, P<:Function} <: AbstractConstrainedOptimizer
+    method::O
+    mu0::T
+    mufactor::T
     precondprep::P
 end
-Fminbox() = Fminbox(LBFGS(); mu0 = NaN, mufactor = 0.001, precondprep = (P, x, l, u, mu) -> precondprepbox!(P, x, l, u, mu))
-function Fminbox(method;
-        mu0 = NaN,
-        mufactor = 0.001,
-        precondprep = (P, x, l, u, mu) -> precondprepbox!(P, x, l, u, mu))
 
-Fminbox(method, promote(mu0, mufactor)..., precondprep) # default optimizer
+function Fminbox(method::AbstractOptimizer = LBFGS();
+                 mu0::Real = NaN, mufactor::Real = 0.001,
+                 precondprep = (P, x, l, u, mu) -> precondprepbox!(P, x, l, u, mu))
+    if method isa Newton
+        warn("Newton is not supported as the Fminbox optimizer. Defaulting to LBFGS.")
+        method = LBFGS()
+    end
+    Fminbox(method, promote(mu0, mufactor)..., precondprep) # default optimizer
 end
 
 Base.summary(F::Fminbox) = "Fminbox with $(summary(F.method))"
@@ -117,7 +119,7 @@ function optimize(obj,
                   l::AbstractArray{T},
                   u::AbstractArray{T},
                   initial_x::AbstractArray{T},
-                  F::Fminbox{O} = Fminbox()) where {T<:AbstractFloat,O<:AbstractOptimizer}
+                  F::Fminbox = Fminbox()) where T<:AbstractFloat
     od = OnceDifferentiable(obj, initial_x, zero(T))
     optimize(od, l, u, initial_x, F)
 end
@@ -127,7 +129,7 @@ function optimize(f,
                   l::AbstractArray{T},
                   u::AbstractArray{T},
                   initial_x::AbstractArray{T},
-                  F::Fminbox{O} = Fminbox()) where {T<:AbstractFloat,O<:AbstractOptimizer}
+                  F::Fminbox = Fminbox()) where T<:AbstractFloat
     od = OnceDifferentiable(f, g!, initial_x, zero(T))
     optimize(od, l, u, initial_x, F)
 end
@@ -137,15 +139,14 @@ function optimize(
         l::AbstractArray{T},
         u::AbstractArray{T},
         initial_x::AbstractArray{T},
-        F::Fminbox{O} = Fminbox(),
-        options = Options()) where {T<:AbstractFloat,O<:AbstractOptimizer}
+        F::Fminbox = Fminbox(),
+        options = Options()) where T<:AbstractFloat
 
 
     outer_iterations = options.outer_iterations
     allow_outer_f_increases = options.allow_outer_f_increases
     show_trace, store_trace, extended_trace = options.show_trace, options.store_trace, options.extended_trace
 
-    O == Newton && warn("Newton is not supported as the inner optimizer. Defaulting to ConjugateGradient.")
     x = copy(initial_x)
     fbarrier = (gbarrier, x) -> barrier_box(gbarrier, x, l, u)
     fb = (gbarrier, x, gfunc) -> function_barrier(gfunc, gbarrier, x, df.fdf, fbarrier)
@@ -158,7 +159,7 @@ function optimize(
     # initialization only makes use of the magnitude, we can fix this
     # by using the sum of the absolute values of the contributions
     # from each edge.
-    boundaryidx = Array{Int,1}()
+    boundaryidx = Vector{Int}(0)
     for i in eachindex(gbarrier)
         thisx = x[i]
         thisl = l[i]
@@ -196,7 +197,7 @@ function optimize(
     end
 
     g = similar(x)
-    fval_all = Array{Vector{T}}(0)
+    fval_all = Vector{Vector{T}}(0)
 
     # Count the total number of outer iterations
     iteration = 0
