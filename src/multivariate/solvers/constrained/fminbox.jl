@@ -56,7 +56,8 @@ function barrier_combined(gfunc, gbarrier, g, x::AbstractArray,
     return convert(eltype(x), valfunc + mu[]*valbarrier) # FIXME make this unnecessary
 end
 
-function limits_box(x::AbstractArray{T}, d::AbstractArray{T}, l::AbstractArray{T}, u::AbstractArray{T}) where T
+function limits_box(x::AbstractArray{T}, d::AbstractArray{T},
+                    l::AbstractArray{T}, u::AbstractArray{T}) where T
     alphamax = convert(T, Inf)
     @simd for i in eachindex(x)
         @inbounds if d[i] < 0
