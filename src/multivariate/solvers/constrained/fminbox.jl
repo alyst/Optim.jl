@@ -17,7 +17,7 @@ function initial_mu(gfunc::AbstractArray{T}, gbarrier::AbstractArray{T}, mu0fact
 end
 
 function barrier_box(g, x::AbstractArray{T}, l::AbstractArray{T}, u::AbstractArray{T}) where T
-    calc_g = !(g === nothing)
+    calc_g = g !== nothing
 
     v = zero(T)
     @inbounds for i in eachindex(x)
@@ -49,7 +49,7 @@ end
 function barrier_combined(gfunc, gbarrier, g, x::AbstractArray{T}, fb::FB, mu::T) where {T, FB<:Function}
     calc_g = !(g === nothing)
     valfunc, valbarrier = fb(gbarrier, x, gfunc)
-    if calc_g
+    if g !== nothing
         g .= gfunc .+ mu.*gbarrier
     end
     return convert(T, valfunc + mu*valbarrier) # FIXME make this unnecessary
