@@ -41,18 +41,19 @@ function barrier_box(g, x::AbstractArray{T}, l::AbstractArray{T}, u::AbstractArr
     return v
 end
 
-function function_barrier(gfunc, gbarrier, x::AbstractArray{T}, f::F, fbarrier::FB) where {T, F<:Function, FB<:Function}
+function function_barrier(gfunc, gbarrier, x::AbstractArray,
+                          f::Function, fbarrier::Function)
     vbarrier = fbarrier(gbarrier, x)
     return (isfinite(vbarrier) ? f(gfunc, x) : vbarrier), vbarrier
 end
 
-function barrier_combined(gfunc, gbarrier, g, x::AbstractArray{T}, fb::FB, mu::T) where {T, FB<:Function}
-    calc_g = !(g === nothing)
+function barrier_combined(gfunc, gbarrier, g, x::AbstractArray,
+                          fb::Function, mu::Real)
     valfunc, valbarrier = fb(gbarrier, x, gfunc)
     if g !== nothing
         g .= gfunc .+ mu.*gbarrier
     end
-    return convert(T, valfunc + mu*valbarrier) # FIXME make this unnecessary
+    return convert(eltype(x), valfunc + mu[]*valbarrier) # FIXME make this unnecessary
 end
 
 function limits_box(x::AbstractArray{T}, d::AbstractArray{T}, l::AbstractArray{T}, u::AbstractArray{T}) where T
